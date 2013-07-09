@@ -14,15 +14,13 @@
 
 ; finds matching open-loop, and returns its index
 (define (find-open code code-idx offset)
-  (if 
-   (>= (- code-idx 1) 0)
-   (cond
-    [(equal? (string-ref code (- code-idx 1)) #\[)
-     (if
-      (equal? offset 0)
+  (if (>= (- code-idx 1) 0)
+   (case (string-ref code (- code-idx 1))
+    [(#\[)
+     (if (equal? offset 0)
       (- code-idx 1)
       (find-open code (- code-idx 1) (- offset 1)))]
-    [(equal? (string-ref code (- code-idx 1)) #\])
+    [(#\])
      (find-open code (- code-idx 1) (+ offset 1))]
     [else (find-open code (- code-idx 1) offset)])
    (raise 'No-Open-Exception)))
@@ -31,13 +29,12 @@
 (define (find-close code code-idx offset)
   (if 
    (< (+ code-idx 1) (string-length code))
-   (cond
-    [(equal? (string-ref code (+ code-idx 1)) #\])
-     (if
-      (equal? offset 0)
+   (case (string-ref code (+ code-idx 1))
+    [(#\])
+     (if (equal? offset 0)
       (+ code-idx 1)
       (find-close code (+ code-idx 1) (- offset 1)))]
-    [(equal? (string-ref code (+ code-idx 1)) #\[)
+    [(#\[)
      (find-close code (+ code-idx 1) (+ offset 1))]
     
     [else (find-close code (+ code-idx 1) offset)])
@@ -45,15 +42,13 @@
 
 ; handles parsed [
 (define (handle-open code code-idx buffer buf-idx)
-  (if
-   (equal? (bytes-ref buffer buf-idx) 0)
+  (if (equal? (bytes-ref buffer buf-idx) 0)
    (parse code (find-close code code-idx 0) buffer buf-idx)
    (parse code (+ code-idx 1) buffer buf-idx)))
 
 ; handles parsed ]
 (define (handle-close code code-idx buffer buf-idx)
-  (if
-   (equal? (bytes-ref buffer buf-idx) 0)
+  (if (equal? (bytes-ref buffer buf-idx) 0)
    (parse code (+ code-idx 1) buffer buf-idx)
    (parse code (find-open code code-idx 0) buffer buf-idx)))
 
@@ -65,36 +60,36 @@
 ; recursive function to parse code string
 (define (parse code code-idx buffer buf-idx)
   (if (> (string-length code) code-idx) 
-  (cond
+  (case (string-ref code code-idx)
     
     ; handle position changes
-    [(equal? (string-ref code code-idx) #\>)
+    [(#\>)
      (parse code (+ code-idx 1) buffer (+ buf-idx 1))]
-    [(equal? (string-ref code code-idx) #\<)
+    [(#\<)
      (parse code (+ code-idx 1) buffer (- buf-idx 1))]
     
     ; handle byte value changes
-    [(equal? (string-ref code code-idx) #\+)
+    [(#\+)
      (parse code (+ code-idx 1) (buf-deinc buffer buf-idx +) buf-idx)]
-    [(equal? (string-ref code code-idx) #\-)
+    [(#\-)
      (parse code (+ code-idx 1) (buf-deinc buffer buf-idx -) buf-idx)]
     
     ; handle loops
-    [(equal? (string-ref code code-idx) #\[)
+    [(#\[)
      (handle-open code code-idx buffer buf-idx)]
-    [(equal? (string-ref code code-idx) #\])
+    [(#\])
      (handle-close code code-idx buffer buf-idx)]
     
     ; handle input/output
-    [(equal? (string-ref code code-idx) #\.)
+    [(#\.)
      (handle-print code code-idx buffer buf-idx)]
-    [(equal? (string-ref code code-idx) #\,)
+    [(#\,)
      (parse code (+ code-idx 1) (buf-input buffer buf-idx) buf-idx)]
     
     ; ignore everything else
     [else
      (parse code (+ code-idx 1) buffer buf-idx)])
-  (printf "~nEnd")))
+  (printf "~nEnd~n")))
 
 ;wrapper for parse
 (define (brainfuck code)
